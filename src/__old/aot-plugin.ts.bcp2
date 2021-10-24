@@ -1,0 +1,506 @@
+import {
+  DEFAULT_CONSTANTS_TO_IMPORT,
+  generateConstantsToImportForComponentTemplateFromObject,
+  ILines,
+  indentLines,
+  linesToString,
+  stringToLinesRaw,
+  transpileReactiveHTMLAsRXTemplateToReactiveDOMJSLines,
+} from '@lifaon/rx-dom';
+import { Node } from 'acorn';
+import { full } from 'acorn-walk';
+import { generate } from 'astring';
+import {
+  CallExpression,
+  Expression,
+  Identifier,
+  ImportDeclaration,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier,
+  ImportSpecifier,
+  MemberExpression,
+  Pattern,
+  Property,
+  SpreadElement,
+  Super,
+} from 'estree';
+import { promises as $fs } from 'fs';
+import { minifyHTML } from './shared/optimize/minify-html';
+import {
+  fixPropertyDefinition,
+  isCallExpression,
+  isExpressionStatement,
+  isIdentifier,
+  isImportDeclaration,
+  isImportSpecifier,
+  isLiteral,
+  isMemberExpression,
+  isMetaProperty,
+  isNewExpression,
+  isObjectExpression,
+  isProgram,
+  isProperty,
+} from './shared/parse/estree';
+import { parseEcmaScript } from './shared/parse/parse-ecsmascript';
+
+/*----------------*/
+
+function createImportDeclaration(
+  path: string,
+  specifiers: Array<ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier> = [],
+): ImportDeclaration {
+  return {
+    type: 'ImportDeclaration',
+    specifiers,
+    source: {
+      type: 'Literal',
+      value: path,
+      raw: JSON.stringify(path),
+    },
+  };
+}
+
+function appendSpecifiersToImportDeclaration(
+  node: ImportDeclaration,
+  specifiers: Array<ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier>,
+): ImportDeclaration {
+  node.specifiers.push(...specifiers);
+  return node;
+}
+
+function appendSimpleSpecifierToImportDeclaration(
+  node: ImportDeclaration,
+  identifier: string,
+): ImportDeclaration {
+  const alreadyHasSpecifier: boolean = node.specifiers.some((specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier) => {
+    if (isImportSpecifier(specifier)) {
+      return (specifier.imported.name === identifier); // TODO check .local ?
+    } else {
+      throw new Error(`Unsupported specifier`);
+    }
+  });
+  if (!alreadyHasSpecifier) {
+    node.specifiers.push(createSimpleImportSpecifier(identifier));
+  }
+  return node;
+}
+
+function createSimpleImportSpecifier(
+  identifier: string,
+): ImportSpecifier {
+  const _identifier: Identifier = {
+    type: 'Identifier',
+    name: identifier,
+  };
+
+  return {
+    type: 'ImportSpecifier',
+    imported: _identifier,
+    local: _identifier,
+  };
+}
+
+function addImportToProgram(
+  ast: Node,
+  path: string,
+  identifier: string,
+): void {
+  let found: boolean = false;
+  full(ast, (node: Node) => {
+    if (
+      (isImportDeclaration(node))
+      && (node.source.value === path)
+    ) {
+      found = true;
+      appendSimpleSpecifierToImportDeclaration(node, identifier);
+    }
+  });
+
+  if (!found) {
+    if (isProgram(ast)) {
+      ast.body = [
+        createImportDeclaration(
+          path,
+          [createSimpleImportSpecifier(identifier)],
+        ),
+        ...ast.body,
+      ];
+    } else {
+      throw new Error(`Expected Program`);
+    }
+  }
+}
+
+function addImportRXDOMToProgram(
+  ast: Node,
+): void {
+  [
+    'DEFAULT_CONSTANTS_TO_IMPORT',
+    'generateCreateElementFunctionWithCustomElements',
+    'generateGetNodeModifierFunctionFromArray',
+  ].forEach((identifier: string) => {
+    addImportToProgram(
+      ast,
+      '@lifaon/rx-dom',
+      identifier,
+    );
+  });
+}
+
+/*----------------*/
+
+let POLYFILL_DOM_PROMISE: Promise<void>;
+
+export function polyfillDOM(): Promise<void> {
+  if (POLYFILL_DOM_PROMISE === void 0) {
+    // @ts-ignore
+    POLYFILL_DOM_PROMISE = import('jsdom')
+      .then((result: any) => {
+        const JSDOM: any = result.default.JSDOM;
+        const dom = new JSDOM(`<!DOCTYPE html><p>Hello world</p>`);
+        ['DOMParser', 'Node', 'HTMLElement', 'Element'].forEach((key: string) => {
+          if (!(key in globalThis)) {
+            // console.log('setting', key);
+            globalThis[key] = dom.window[key];
+          }
+        });
+      });
+  }
+  return POLYFILL_DOM_PROMISE;
+}
+
+export function readFile(
+  path: string,
+): Promise<string> {
+  return $fs.readFile(path, { encoding: 'utf8' });
+  // return import('fs')
+  //   .then(({ promises }) => {
+  //     return promises.readFile(path, { encoding: 'utf8' });
+  //   });
+  // if ('require' in globalThis) {
+  //   return globalThis.require('fs').promises.readFile(path, { encoding: 'utf8' });
+  // } else if ('fetch' in globalThis) {
+  //   return fetch(path)
+  //     .then((response: Response) => {
+  //       if (response.ok) {
+  //         return response.text();
+  //       } else {
+  //         throw createNetworkErrorFromResponse(response);
+  //       }
+  //     });
+  // } else {
+  //   return import('fs')
+  //     .then(() => {
+  //
+  //     });
+  //   return Promise.reject(new Error(`no function to read a file`));
+  // }
+}
+
+export interface IAOTCompileReactiveHTMLAsGenericComponentTemplateOptions {
+  html: string;
+  customElements?: ILines;
+  modifiers?: ILines;
+  useDynamicImport?: boolean;
+}
+
+export function aotCompileReactiveHTMLAsGenericComponentTemplate(
+  {
+    html,
+    customElements = [],
+    modifiers = [],
+    useDynamicImport = false,
+  }: IAOTCompileReactiveHTMLAsGenericComponentTemplateOptions,
+): ILines {
+
+  const reactiveDOMJSLInes: ILines = transpileReactiveHTMLAsRXTemplateToReactiveDOMJSLines(
+    html,
+    generateConstantsToImportForComponentTemplateFromObject(DEFAULT_CONSTANTS_TO_IMPORT),
+  );
+
+  const wrapWithDynamicImport = (
+    lines: ILines,
+  ): ILines => {
+    if (useDynamicImport) {
+      return [
+        `return import('@lifaon/rx-dom')`,
+        ...indentLines([
+          `.then(({`,
+          ...indentLines([
+            `DEFAULT_CONSTANTS_TO_IMPORT,`,
+            `generateCreateElementFunctionWithCustomElements,`,
+            `generateGetNodeModifierFunctionFromArray,`,
+          ]),
+          `}) => {`,
+          ...indentLines([
+            `return (`,
+            ...indentLines(lines),
+            `);`,
+          ]),
+          `});`,
+        ]),
+      ];
+    } else {
+      return [
+        `return new Promise((resolve) => {`,
+        ...indentLines([
+          `resolve(`,
+          ...indentLines(lines),
+          `);`,
+        ]),
+        `});`,
+      ];
+    }
+  };
+
+  // const reactiveDOMJSLInes: ILines = transpileReactiveHTMLAsComponentTemplateFunctionToReactiveDOMJSLines(
+  //   html,
+  //   generateConstantsToImportForComponentTemplateFromObject(DEFAULT_CONSTANTS_TO_IMPORT),
+  // );
+
+  const constantsToImportLines = [];
+
+  const customElementsLines: ILines = (customElements.length > 0)
+    ? [
+      `createElement: generateCreateElementFunctionWithCustomElements(`,
+      ...indentLines(customElements),
+      `),`,
+    ]
+    : [];
+
+  const modifiersLines: ILines = (modifiers.length > 0)
+    ? [
+      `getNodeModifier: generateGetNodeModifierFunctionFromArray(`,
+      ...indentLines(modifiers), // TODO optimize if no modifiers
+      `),`,
+    ]
+    : [];
+
+  return [
+    `(variables) => {`,
+    ...indentLines(
+      wrapWithDynamicImport([
+        `(`,
+        ...indentLines(reactiveDOMJSLInes),
+        `)({`,
+        ...indentLines([
+          `...DEFAULT_CONSTANTS_TO_IMPORT,`, // TODO optimize by importing only needed stuff
+          ...customElementsLines,
+          ...modifiersLines,
+          `...variables,`,
+        ]),
+        `})`,
+      ]),
+    ),
+    `}`,
+  ];
+}
+
+export interface IAOTLoadReactiveHTMLAsGenericComponentTemplateOptions extends Omit<IAOTCompileReactiveHTMLAsGenericComponentTemplateOptions, 'html'> {
+  path: string;
+}
+
+export function aotLoadReactiveHTMLAsGenericComponentTemplate(
+  {
+    path,
+    ...options
+  }: IAOTLoadReactiveHTMLAsGenericComponentTemplateOptions,
+): Promise<ILines> {
+  return readFile(path)
+    .then((html: string): string => {
+      return minifyHTML(html);
+    })
+    .then((html: string): ILines => {
+      return aotCompileReactiveHTMLAsGenericComponentTemplate({
+        html,
+        ...options,
+      });
+    });
+}
+
+/*----------------*/
+
+export function isImportMetaURLNode(
+  node: any,
+): node is MemberExpression {
+  return isMemberExpression(node)
+    && isMetaProperty(node.object)
+    && isIdentifier(node.object.meta)
+    && (node.object.meta.name === 'import')
+    && isIdentifier(node.object.property)
+    && (node.object.property.name === 'meta')
+    && isIdentifier(node.property)
+    && (node.property.name === 'url')
+    ;
+}
+
+function analyseURLPropertyValue(
+  node: Expression | Pattern | Super,
+  path: string,
+): URL {
+  if (
+    isMemberExpression(node)
+    && isIdentifier(node.property)
+    && (node.property.name === 'href')
+  ) {
+    return analyseURLPropertyValue(node.object, path);
+  } else if (
+    isNewExpression(node)
+    && isIdentifier(node.callee)
+    && (node.callee.name === 'URL')
+    && (node.arguments.length === 2)
+    && isLiteral(node.arguments[0])
+    && (typeof node.arguments[0].value === 'string')
+    && isImportMetaURLNode(node.arguments[1])
+  ) {
+    return new URL(node.arguments[0].value, `file:${path}`);
+  } else {
+    throw new Error(`Invalid URL format`);
+  }
+}
+
+function analyseURLProperty(
+  node: Property,
+  path: string,
+): URL {
+  return analyseURLPropertyValue(node.value, path);
+}
+
+function analyseCustomElementsPropertyValue(
+  node: Expression | Pattern,
+): ILines {
+  return stringToLinesRaw(generate(node));
+}
+
+function analyseCustomElementsProperty(
+  node: Property,
+): ILines {
+  return analyseCustomElementsPropertyValue(node.value);
+}
+
+async function analyseLoadReactiveHTMLAsGenericComponentTemplateCallExpression(
+  node: CallExpression,
+  path: string,
+  rootAST: Node,
+): Promise<void> {
+  if (
+    (node.arguments.length > 0)
+    && isObjectExpression(node.arguments[0])
+  ) {
+    const properties: Array<Property | SpreadElement> = node.arguments[0].properties;
+
+    let url!: URL;
+    let customElements!: ILines;
+    let modifiers!: ILines;
+
+    for (let i = 0, l = properties.length; i < l; i++) {
+      const property: (Property | SpreadElement) = properties[i];
+      if (
+        isProperty(property)
+        && isIdentifier(property.key)
+      ) {
+        switch (property.key.name) {
+          case 'url':
+            url = analyseURLProperty(property, path);
+            break;
+          case 'customElements':
+            customElements = analyseCustomElementsProperty(property);
+            break;
+          default:
+            throw new Error(`Unsupported property: ${property.key}`);
+        }
+      }
+    }
+
+    if (
+      (url !== void 0)
+    ) {
+      const useDynamicImport: boolean = false;
+
+      const lines: ILines = await aotLoadReactiveHTMLAsGenericComponentTemplate({
+        path: url.pathname,
+        customElements,
+        modifiers,
+      });
+
+      const childAST: Node = parseEcmaScript(linesToString(lines));
+
+      if (
+        isProgram(childAST)
+        && (childAST.body.length === 1)
+        && isExpressionStatement(childAST.body[0])
+      ) {
+        Object.assign(node, childAST.body[0]);
+
+        if (!useDynamicImport) {
+          addImportRXDOMToProgram(rootAST);
+        }
+      } else {
+        console.log(childAST);
+        throw new Error(`Invalid tree`);
+      }
+
+    }
+  }
+}
+
+/*----------------*/
+
+async function runAOT(
+  src: string,
+  path: string,
+): Promise<string> {
+  await polyfillDOM();
+
+  const ast: Node = parseEcmaScript(src);
+
+  // if (src.includes('Component')) {
+  //   console.log(src);
+  //   console.log(ast);
+  // }
+
+  const promises: Promise<void>[] = [];
+
+  fixPropertyDefinition(ast);
+
+  full(ast, (node: Node) => {
+    if (
+      isCallExpression(node)
+      && isIdentifier(node.callee)
+      && (node.callee.name === 'loadReactiveHTMLAsGenericComponentTemplate')
+    ) {
+      promises.push(analyseLoadReactiveHTMLAsGenericComponentTemplateCallExpression(node, path, ast));
+    }
+  });
+
+  await Promise.all(promises);
+
+  // console.log(generate(ast));
+
+  return generate(ast);
+  // try {
+  //   return generate(ast);
+  // } catch(e) {
+  //   console.log(src);
+  //   throw e;
+  // }
+}
+
+export function aotPlugin(): any {
+  return {
+    name: 'aot',
+
+    transform: async (
+      src: string,
+      path: string,
+    ): Promise<any> => {
+      if (path.endsWith('.ts')) {
+        return {
+          code: await runAOT(src, path),
+          map: null,
+        };
+      }
+    },
+  };
+}
+

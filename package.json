@@ -1,0 +1,23 @@
+{
+  "name": "@lifaon/rx-dom-aot-plugin",
+  "version": "1.0.0",
+  "description": "Description",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lifaon74/rx-dom-aot-plugin"
+  },
+  "keywords": [],
+  "author": "Valentin Richard",
+  "license": "MIT",
+  "access": "public",
+  "dependencies": {
+    "@lifaon/rx-dom": "1.2.0",
+    "@types/estree": "^0.0.50",
+    "acorn": "^8.5.0",
+    "acorn-walk": "^8.2.0",
+    "astring": "^1.7.5",
+    "html-minifier": "^4.0.0",
+    "jsdom": "^18.0.0",
+    "source-map": "^0.7.3"
+  }
+}
