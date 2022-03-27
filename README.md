@@ -67,24 +67,23 @@ export default config;
 
 ### Details
 
-Currently, this plugin can only optimize the functions `compileReactiveHTMLAsGenericComponentTemplate` and `loadReactiveHTMLAsGenericComponentTemplate`
+Currently, this plugin can only optimize the functions `compileReactiveHTMLAsComponentTemplate` and `loadReactiveHTMLAsComponentTemplate`
 with some constraints:
 
 
-#### loadReactiveHTMLAsGenericComponentTemplate
+#### loadReactiveHTMLAsComponentTemplate
 
 ```ts
-await loadReactiveHTMLAsGenericComponentTemplate({
+await loadReactiveHTMLAsComponentTemplate({
   url: new URL(/* string => relative path to your reactive html */, import.meta.url)/* .href (optional) */,
-  customElements: /* anything supported: array, variables, etc... */,
-  modifiers: /* anything supported: array, variables, etc... */,
+  /* ...other options */
 });
 ```
 
 Valid examples:
 
 ```ts
-await loadReactiveHTMLAsGenericComponentTemplate({
+await loadReactiveHTMLAsComponentTemplate({
   url: new URL('./hello-world-component.html', import.meta.url),
   customElements: [ // optional
     // put your custom elements here
@@ -96,39 +95,38 @@ await loadReactiveHTMLAsGenericComponentTemplate({
 ```
 
 ```ts
-await loadReactiveHTMLAsGenericComponentTemplate({ url: new URL('./hello-world-component.html', import.meta.url) });
+await loadReactiveHTMLAsComponentTemplate({ url: new URL('./hello-world-component.html', import.meta.url) });
 ```
 
 Invalid examples:
 
 ```ts
 const url = new URL('./hello-world-component.html', import.meta.url);
-await loadReactiveHTMLAsGenericComponentTemplate({ url });
+await loadReactiveHTMLAsComponentTemplate({ url });
 ```
 
 ```ts
-import { loadReactiveHTMLAsGenericComponentTemplate as reactiveHTML } from '@lifaon/rx-dom';
+import { loadReactiveHTMLAsComponentTemplate as reactiveHTML } from '@lifaon/rx-dom';
 await reactiveHTML({ url: new URL('./hello-world-component.html', import.meta.url) });
 ```
 
-#### compileReactiveHTMLAsGenericComponentTemplate
+#### compileReactiveHTMLAsComponentTemplate
 
 ```ts
-compileReactiveHTMLAsGenericComponentTemplate({
+compileReactiveHTMLAsComponentTemplate({
   html: /* string, template string (without interpolated content) or variable (the variabe must be a default import) */,
-  customElements: /* anything supported: array, variables, etc... */,
-  modifiers: /* anything supported: array, variables, etc... */,
+  /* ...other options */
 });
 ```
 
 Valid examples:
 
 ```ts
-compileReactiveHTMLAsGenericComponentTemplate({ html: 'abc' });
+compileReactiveHTMLAsComponentTemplate({ html: 'abc' });
 ```
 
 ```ts
-compileReactiveHTMLAsGenericComponentTemplate({
+compileReactiveHTMLAsComponentTemplate({
   html: `
     <div class="my-div">
       abc
@@ -139,19 +137,19 @@ compileReactiveHTMLAsGenericComponentTemplate({
 
 ```ts
 import html from './hello-world-component.html?raw'; // vite js
-compileReactiveHTMLAsGenericComponentTemplate({ html });
+compileReactiveHTMLAsComponentTemplate({ html });
 ```
 
 Invalid examples:
 
 ```ts
 const html = 'abc';
-compileReactiveHTMLAsGenericComponentTemplate({ html });
+compileReactiveHTMLAsComponentTemplate({ html });
 ```
 
 ```ts
 const content = 'abc';
-compileReactiveHTMLAsGenericComponentTemplate({
+compileReactiveHTMLAsComponentTemplate({
   html: `
     <div class="my-div">
       ${content}
@@ -162,10 +160,10 @@ compileReactiveHTMLAsGenericComponentTemplate({
 
 ```ts
 import html from './hello-world-component.ts'; // './hello-world-component.ts' MUST contain only reactive-html
-compileReactiveHTMLAsGenericComponentTemplate({ html });
+compileReactiveHTMLAsComponentTemplate({ html });
 ```
 
 ```ts
-import { compileReactiveHTMLAsGenericComponentTemplate as reactiveHTML } from '@lifaon/rx-dom';
+import { compileReactiveHTMLAsComponentTemplate as reactiveHTML } from '@lifaon/rx-dom';
 reactiveHTML({ html: 'abc' });
 ```

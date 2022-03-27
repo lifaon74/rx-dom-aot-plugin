@@ -1,6 +1,6 @@
 {
   "name": "@lifaon/rx-dom-aot-plugin",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "Description",
   "repository": {
     "type": "git",
@@ -11,7 +11,8 @@
   "license": "MIT",
   "access": "public",
   "dependencies": {
-    "@lifaon/rx-dom": "1.2.0",
+    "@lifaon/rx-dom": "2.1.0",
+    "@lifaon/path": "2.1.0",
     "@types/estree": "^0.0.50",
     "acorn": "^8.5.0",
     "acorn-walk": "^8.2.0",

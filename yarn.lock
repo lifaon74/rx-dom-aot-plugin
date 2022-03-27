@@ -2,17 +2,22 @@
 # yarn lockfile v1
 
 
-"@lifaon/rx-dom@1.2.0":
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/@lifaon/rx-dom/-/rx-dom-1.1.2.tgz#ab61072d642444e394dfce0333a7d244e89836e3"
-  integrity sha512-W6FHcS5Nm/F4CMO5P/f8dEgCak6UAYpu10UMMwofg8vgqoqNOkoEuUhgxDT4o3nKOEbc669Fy81ABmeX18eIyQ==
-  dependencies:
-    "@lifaon/rx-js-light" "1.1.3"
+"@lifaon/path@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@lifaon/path/-/path-2.0.0.tgz#722741dd43887f997c95fc2cfaf2a0e0683e170f"
+  integrity sha512-MQ/UBA8H3S3zX8Sqg4vmguag7pIb505JcVvJ9+cqbScyk+4tmiCn7Ph7MJN7HN1GYRzyspObOs4PYG5aFjGkAg==
 
-"@lifaon/rx-js-light@1.1.3":
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/@lifaon/rx-js-light/-/rx-js-light-1.1.3.tgz#55d0c933871394531486e845fb34fa47511306ff"
-  integrity sha512-rn/4bCWlbB4TC2tuXpkQIR7bm2+I3slWh7swkDEsbwzgtf5xgfuzKIMrKW0gfO2VZA1k5KUMDP1kZsaTx0t+Tw==
+"@lifaon/rx-dom@2.1.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@lifaon/rx-dom/-/rx-dom-2.0.0.tgz#742b193f7f551ee060b4454fe446df7127bad3a8"
+  integrity sha512-3gu9bt8QNqa/nXwOP4coMupe07GDlW28OUVZpSEx8kVz//9myBcdyrXgDkSXJoRt+Rh80/H6HhicjRe1eWPrXg==
+  dependencies:
+    "@lifaon/rx-js-light" "2.0.0"
+
+"@lifaon/rx-js-light@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@lifaon/rx-js-light/-/rx-js-light-2.0.0.tgz#5611fa4193f22399a5c8175fed9f4bff3e338da1"
+  integrity sha512-LL7+BHNLPDx6n4SceDEdWkcZ7JMqcdrNqMYEWVqkmKtMotmzunN7B7IDHTXlsWcK0w66z7ZzCT8ESMlzq3a0pA==
 
 "@tootallnate/once@2":
   version "2.0.0"

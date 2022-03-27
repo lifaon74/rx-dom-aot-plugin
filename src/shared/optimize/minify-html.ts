@@ -1,4 +1,3 @@
-// import { loadScript } from './load-script';
 // @ts-ignore
 import minify from 'html-minifier';
 

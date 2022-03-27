@@ -2,14 +2,30 @@ import { Node } from 'acorn';
 import { full } from 'acorn-walk';
 import {
   CallExpression,
-  ClassBody, EmptyStatement, ExpressionStatement,
+  ClassBody,
+  EmptyStatement,
+  Expression,
+  ExpressionStatement,
   Identifier,
-  ImportDeclaration, ImportDefaultSpecifier, ImportSpecifier, Literal, MemberExpression, MetaProperty,
-  MethodDefinition, NewExpression,
-  ObjectExpression, Program,
+  ImportDeclaration,
+  ImportDefaultSpecifier,
+  ImportSpecifier,
+  Literal,
+  MemberExpression,
+  MetaProperty,
+  MethodDefinition,
+  NewExpression,
+  ObjectExpression,
+  Program,
   Property,
-  PropertyDefinition, TemplateElement, TemplateLiteral,
+  PropertyDefinition,
+  SpreadElement,
+  TemplateElement,
+  TemplateLiteral,
 } from 'estree';
+
+export type PropertyOrSpreadElement = Property | SpreadElement;
+export type ExpressionOrSpreadElement = Expression | SpreadElement;
 
 export function fixPropertyDefinition(
   ast: Node,
@@ -128,6 +144,12 @@ export function isMetaProperty(
   node: any,
 ): node is MetaProperty {
   return node.type === 'MetaProperty';
+}
+
+export function isSpreadElement(
+  node: any,
+): node is SpreadElement {
+  return node.type === 'SpreadElement';
 }
 
 /** CREATE **/
